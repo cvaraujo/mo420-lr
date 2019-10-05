@@ -1,0 +1,12 @@
+No trabalho foram implementadas 5 variações com o algoritmo Kruskal e 4 variações com o algoritmo Prim. Veja a seguir cada uma delas em mais detalhes:
+	* Kruskal
+		0 - usando a estrutura de union-find sem nenhuma heurística;
+		1 - usando a estrutura de union-find apenas com a heurística path compression;
+		2 - usando a estrutura de union-find apenas com a heurística union-by-rank;
+		3 - usando a estrutura de union-find usando ambas as heurísticas, path compression e union by rank;
+		4 - filter-kruskal usando a estrutura de union-find com ambas as heurística, mas ao invés de ordenar de uma vez, usa a ideia do quicksort e segue construindo a árvore enquanto ordena.
+	* Prim
+		0 - usando vector;
+		1 - usando heap binário;
+		2 - usando heap de fibonacci, iniciando com a heap, para cada vértice, com custo infinito e apenas o vértice raiz com zero e segue realizando a operação de decresase-key, se necessário para cada extract-min;
+		3 - usando heap de fibonacci, iniciando com a heap vazia e realizando a operação insert para cada extract-min; 
