@@ -6,7 +6,8 @@ MST_Kruskal::MST_Kruskal(Graph graph) {
 }
 
 Solution MST_Kruskal::solve() {
-    UnionFind set(graph.n);
+    UnionFind set(graph.n); 
+
     for (int i = 0; i < graph.n; i++)
         set.make_set(i);
 

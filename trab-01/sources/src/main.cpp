@@ -4,10 +4,10 @@
 int main(int argc, const char *argv[]) {
     if (argc < 4) {
         Graph *graph = new Graph();
-        graph->load_graph("Spd_RF2_20_27_219.txt");
-        graph->print_graph();
-        // auto *model = new Model(graph);
-        //model->lagrangean();
+        graph->load_graph("toy.txt");//"Spd_RF2_20_27_219.txt");
+        // graph->print_graph();
+        auto *model = new Model(graph);
+        model->lagrangean();
         return 0;
     } else {
 //         auto *data = new Data(argv[1]);

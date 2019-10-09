@@ -13,10 +13,12 @@ class Model {
     Graph *graph;
     Solution solution;
     MST_Kruskal mst;
-    vector<bool> X;
-    vector<bool> y;
+    vector<bool> Y;
+    vector<int> countAdj;
     vector<double> multipliers;
+    vector<vector<int>> A;
     double objectiveValue;
+    int originalObjectiveValue;
     double UB, LB, lambda;
     int max_iter, B;
     bool feasible;
@@ -28,7 +30,7 @@ public:
 
     double getObjValue();
 
-    double originalObjectiveValue();
+    double getOriginalObjectiveValue();
 
     bool isFeasible();
 
@@ -36,9 +38,7 @@ public:
 
     void getGradient(vector<double> &gradient);
 
-//    void showSolution(const char *input, const char *outputFile, double thetaC, double thetaP, double thetaD,
-//    double endTime
-//    );
+    void updateEdges();
 
     double lagrangean();
 
