@@ -18,7 +18,6 @@ bool Model::solve() {
     this->Y = vector<bool>(graph->n);
     this->countAdj = vector<int>(graph->n);
     this->A = vector<vector<int>>(graph->n, vector<int>());
-    this->multipliers = vector<double>(graph->n);
     this->originalObjectiveValue = 0;
     this->mst = MST_Kruskal(*graph);
     this->solution = mst.solve();
@@ -41,23 +40,27 @@ bool Model::solve() {
             objectiveValue += (1 - multipliers[i] * countAdj[i]);
         } else this->Y[i] = false;   
     }
-
-    cout << "Solved" << endl;
     return true;
 }
 
 void Model::getGradient(vector<double> &gradient) {
+    // cout << "Gradient" << endl;
     for (int i = 0; i < graph->n; i++) {
         gradient[i] = int(A[i].size()) - 2;
         if (Y[i]) gradient[i] -= countAdj[i];
+        // cout << gradient[i] << ", ";
         if (gradient[i] < 0) this->feasible = false;
     }
 }
 
 double Model::getNorm(vector<double> gradient) {
     double sum = 0;
-    for (int k = 0; k < graph->n; k++)
+    for (int k = 0; k < graph->n; k++){
+        // cout << gradient[k] << ", ";
         sum += pow(gradient[k], 2);
+    }
+    // cout << "\n" << "-------------" << endl;
+
     return sqrt(sum);
 }
 
@@ -86,12 +89,12 @@ void Model::updateEdges(){
 double Model::lagrangean() {
     int progress = 0, iter = 0;
     double theta, originalObjectiveFunction, objectiveFunctionPPL;
-    vector<double> gradient, nextMultipliers = vector<double>(graph->n);
+    vector<double> nextMultipliers, gradient = vector<double>(graph->n);
     double norm;
     lambda = 1.5;
     max_iter = 1000;
-    B = 3;
-    UB = 50; // Create a constructive heuristic
+    B = 5;
+    UB = 10; // Create a constructive heuristic
     LB = 0;
 
 
@@ -109,7 +112,8 @@ double Model::lagrangean() {
             else theta = lambda * (UB - objectiveFunctionPPL) / pow(norm, 2);
 
             nextMultipliers = vector<double>(graph->n);
-
+            for (int k: multipliers) cout << k << ", ";
+            cout << endl;
             for (int i = 0; i < graph->n; i++) {
                 nextMultipliers[i] = max(0.0, multipliers[i] + gradient[i] * theta);
                 multipliers[i] = nextMultipliers[i];
