@@ -6,9 +6,14 @@ void Graph::load_graph(string path) {
     file >> n >> m;
     Edge e;
     edges = vector<Edge>();
+    vertices = vector<int>();
+    vector<int> countIncidence = vector<int>();
+
     for (int i = 0; i < m; i++) {
         file >> e.u >> e.v;
-        e.u--, e.v--;
+        countIncidence[--e.u] += 1, countIncidence[--e.v] += 1;
+        if (countIncidence[e.u] == 3) vertices.push_back[e.u];
+        if (countIncidence[e.v] == 3) vertices.push_back[e.v];
         edges.push_back(e);
     }
     file.close();

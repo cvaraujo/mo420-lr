@@ -14,26 +14,28 @@ Model::Model(Graph *graph) {
 }
 
 bool Model::solve() {
-    this->solution = Solution();
     this->Y = vector<bool>(graph->n);
     this->countAdj = vector<int>(graph->n);
     this->A = vector<vector<int>>(graph->n, vector<int>());
     this->originalObjectiveValue = 0;
+
+    // Solve the MST Problem
     this->mst = MST_Kruskal(*graph);
     this->solution = mst.solve();
     
     int u, v;
     for (auto edge: solution.edges){
         u = edge.u, v = edge.v;
-        cout << u << " - " << v << " = " << edge.weight << endl;
         countAdj[u]++, countAdj[v]++;
-        A[u].push_back(v);//, A[v].push_back(u);
-        if (countAdj[u] > 2) originalObjectiveValue++;
-        else if(countAdj[v] > 2) originalObjectiveValue++;
+        A[u].push_back(v);
+        if (countAdj[u] == 3) originalObjectiveValue++;
+        if(countAdj[v] == 3) originalObjectiveValue++;
     }
+
     objectiveValue = solution.value;
 
-    for (int i = 0; i < graph->n; i++) {
+    // Inspection problem
+    for (int i : graph.vertices) {
         objectiveValue += multipliers[i];
         if ((1 - multipliers[i] * countAdj[i]) < 0) {
             this->Y[i] = true;
@@ -44,11 +46,9 @@ bool Model::solve() {
 }
 
 void Model::getGradient(vector<double> &gradient) {
-    // cout << "Gradient" << endl;
     for (int i = 0; i < graph->n; i++) {
         gradient[i] = int(A[i].size()) - 2;
         if (Y[i]) gradient[i] -= countAdj[i];
-        // cout << gradient[i] << ", ";
         if (gradient[i] < 0) this->feasible = false;
     }
 }
@@ -56,11 +56,8 @@ void Model::getGradient(vector<double> &gradient) {
 double Model::getNorm(vector<double> gradient) {
     double sum = 0;
     for (int k = 0; k < graph->n; k++){
-        // cout << gradient[k] << ", ";
         sum += pow(gradient[k], 2);
     }
-    // cout << "\n" << "-------------" << endl;
-
     return sqrt(sum);
 }
 

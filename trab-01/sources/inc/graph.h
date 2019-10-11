@@ -28,7 +28,8 @@ class Graph {
 public:
     int n, m;
     vector<Edge> edges;
-
+    vector<int> vertices;
+    
     Graph() {
     }
 
