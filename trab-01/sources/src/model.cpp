@@ -6,7 +6,6 @@ Model::Model(Graph *graph) {
         this->mst = MST_Kruskal(*graph);
         this->solution = Solution();
         this->Y = vector<bool>(graph->n);
-        this->countAdj = vector<int>(graph->n);
         this->A = vector<vector<int>>(graph->n, vector<int>());
         this->multipliers = vector<double>(graph->n);
     } else exit(0);
@@ -14,10 +13,10 @@ Model::Model(Graph *graph) {
 }
 
 bool Model::solve() {
+    cout << "Solve" << endl;
     this->Y = vector<bool>(graph->n);
-    this->countAdj = vector<int>(graph->n);
     this->A = vector<vector<int>>(graph->n, vector<int>());
-    this->originalObjectiveValue = 0;
+    this->originalObjectiveValue = 0.0;
 
     // Solve the MST Problem
     this->mst = MST_Kruskal(*graph);
@@ -26,37 +25,37 @@ bool Model::solve() {
     int u, v;
     for (auto edge: solution.edges){
         u = edge.u, v = edge.v;
-        countAdj[u]++, countAdj[v]++;
-        A[u].push_back(v);
-        if (countAdj[u] == 3) originalObjectiveValue++;
-        if(countAdj[v] == 3) originalObjectiveValue++;
+        // cout << u << " -- " << v << ": " << edge.weight << endl;
+        A[u].push_back(v), A[v].push_back(u);
+        if (int(A[u].size()) == 3) originalObjectiveValue++;
+        if(int(A[v].size()) == 3) originalObjectiveValue++;
     }
-
     objectiveValue = solution.value;
+    // cout << "MST: " << objectiveValue << endl;
 
     // Inspection problem
-    for (int i : graph.vertices) {
-        objectiveValue += multipliers[i];
-        if ((1 - multipliers[i] * countAdj[i]) < 0) {
+    double coeficient = 0;
+    for (int i : graph->vertices) {
+        objectiveValue -= 2 * multipliers[i]; 
+        coeficient = 1 - (multipliers[i] * double(graph->incidenceMatrix[i].size()));
+        if (coeficient <= 0) {
             this->Y[i] = true;
-            objectiveValue += (1 - multipliers[i] * countAdj[i]);
+            objectiveValue += coeficient;
         } else this->Y[i] = false;   
     }
     return true;
 }
 
 void Model::getGradient(vector<double> &gradient) {
-    for (int i = 0; i < graph->n; i++) {
-        gradient[i] = int(A[i].size()) - 2;
-        if (Y[i]) gradient[i] -= countAdj[i];
-        if (gradient[i] < 0) this->feasible = false;
+    for (int i : graph->vertices) {
+        gradient[i] = int(A[i].size()) - 2 - (int(graph->incidenceMatrix[i].size()) * Y[i]);
     }
 }
 
 double Model::getNorm(vector<double> gradient) {
     double sum = 0;
-    for (int k = 0; k < graph->n; k++){
-        sum += pow(gradient[k], 2);
+    for (int i : graph->vertices){
+        sum += pow(gradient[i], 2);
     }
     return sqrt(sum);
 }
@@ -70,71 +69,83 @@ double Model::getOriginalObjectiveValue() {
 }
 
 bool Model::isFeasible() {
-    if (feasible) return true;
-    feasible = true;
-    return false;
+    for (int i : graph->vertices)
+        if (int(A[i].size())-2 > int(graph->incidenceMatrix[i].size()) * Y[i])
+            return false;
+    return true;
 }
 // MST problem
 void Model::updateEdges(){
-    for (int i = 0; i < graph->n; i++){
-        for (int v : A[i]){
-            graph->set_edge_value(i, v, multipliers[i]);
-        }
+    for (int i = 0; i < graph->m; i++){
+        Edge e = graph->edges[i];
+        graph->edges[i].weight = multipliers[e.u] + multipliers[e.v];
     }
+    // for (int u : graph->vertices) {
+    //     for (int v : A[u]){
+    //         graph->set_edge_value(u, v, multipliers[u] + multipliers[v]);
+    //     }
+    // }
 }
 
 double Model::lagrangean() {
-    int progress = 0, iter = 0;
+    int iter = 0;
     double theta, originalObjectiveFunction, objectiveFunctionPPL;
-    vector<double> nextMultipliers, gradient = vector<double>(graph->n);
+    vector<double> gradient = vector<double>(graph->n);
     double norm;
-    lambda = 1.5;
     max_iter = 1000;
-    B = 5;
-    UB = 10; // Create a constructive heuristic
-    LB = 0;
+    UB = int(graph->vertices.size()); // Create a constructive heuristic
+    LB = -1;
 
+    double min_neigh = graph->n;
+    for (int i : graph->vertices) {
+        if (int(graph->incidenceMatrix[i].size()) < min_neigh) {
+            min_neigh = double(graph->incidenceMatrix[i].size());
+        }
+    }
+
+    for (int i = 0; i < graph->m; i++){
+        Edge e = graph->edges[i];
+        multipliers[e.u] = multipliers[e.v] = 1/min_neigh;
+        graph->edges[i].weight = multipliers[e.u];
+    }
 
     while (iter < max_iter) {
-        gradient = vector<double>(graph->n);
         if (solve()){
-            getGradient(gradient);
-
-            objectiveFunctionPPL = getObjValue();
-            cout << "PPL: " << objectiveFunctionPPL << endl;
-            
-            norm = getNorm(gradient);
-
-            if (norm == 0) theta = norm;
-            else theta = lambda * (UB - objectiveFunctionPPL) / pow(norm, 2);
-
-            nextMultipliers = vector<double>(graph->n);
-            for (int k: multipliers) cout << k << ", ";
-            cout << endl;
-            for (int i = 0; i < graph->n; i++) {
-                nextMultipliers[i] = max(0.0, multipliers[i] + gradient[i] * theta);
-                multipliers[i] = nextMultipliers[i];
-            }
-
-            if (objectiveFunctionPPL > LB) {
-                LB = objectiveFunctionPPL, progress = 0;
-            } else progress++;
-
-            if (progress == B) lambda /= 2.0;
-
+            // Compute the Upper Bound
             originalObjectiveFunction = getOriginalObjectiveValue();
-            cout << "Original Obj: " << originalObjectiveFunction << endl;      
             if (isFeasible() && originalObjectiveFunction < UB) {
                 UB = originalObjectiveFunction;
-                if ((UB - LB) / LB <= 0.001) return LB;
+                cout << "Feasible" << endl;
+                cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
+                if (UB == 0) return UB;
+                if ((UB - LB) / UB <= 0.001) return UB;
             }
+
+            // and Lower Bound
+            objectiveFunctionPPL = getObjValue();
+            // cout << "PPL: " << objectiveFunctionPPL << endl;
+            if (objectiveFunctionPPL > LB) LB = objectiveFunctionPPL;
+
+            // Get the subgradient
+            getGradient(gradient);
+            norm = getNorm(gradient);
+            
+            lambda = 0.01;
+
+            if (norm == 0) theta = norm;
+            else theta = lambda * ((UB - objectiveFunctionPPL) / pow(norm, 2));
+            
+            for (int i : graph->vertices)
+                multipliers[i] = max(0.0, multipliers[i] + gradient[i] * theta);
+
             updateEdges();
-            for(Edge e: graph->edges) {
-                cout << e.u << " - " << e.v << " = " << e.weight << endl;
-            }
+            // for(Edge e: graph->edges) {
+            //     cout << e.u << " - " << e.v << " = " << e.weight << endl;
+            // }
+
             cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
             iter++;
-            getchar();
+            // getchar();
         }
     }
     return LB;

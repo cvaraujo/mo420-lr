@@ -4,7 +4,7 @@
 int main(int argc, const char *argv[]) {
     if (argc < 4) {
         Graph *graph = new Graph();
-        graph->load_graph("toy.txt");//"Spd_RF2_20_27_219.txt");
+        graph->load_graph("instances_tests/inputs/Spd_RF2_200_222_3811.txt");//"Spd_RF2_20_27_219.txt");//"toy.txt");
         // graph->print_graph();
         auto *model = new Model(graph);
         model->lagrangean();

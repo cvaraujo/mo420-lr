@@ -14,13 +14,12 @@ class Model {
     Solution solution;
     MST_Kruskal mst;
     vector<bool> Y;
-    vector<int> countAdj;
     vector<double> multipliers;
     vector<vector<int>> A;
     double objectiveValue;
     int originalObjectiveValue;
     double UB, LB, lambda;
-    int max_iter, B;
+    int max_iter;
     bool feasible;
 
 public:

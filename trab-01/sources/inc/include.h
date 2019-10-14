@@ -8,8 +8,10 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <algorithm>
 #include <fstream>
 #include <cmath>
+#include <bits/stdc++.h> 
 
 using namespace std;
 

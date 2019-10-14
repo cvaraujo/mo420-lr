@@ -4,19 +4,23 @@ void Graph::load_graph(string path) {
     ifstream file;
     file.open(path, fstream::in);
     file >> n >> m;
+    
     Edge e;
     edges = vector<Edge>();
     vertices = vector<int>();
-    vector<int> countIncidence = vector<int>();
+    incidenceMatrix = vector<vector<int>>(n, vector<int>());
 
     for (int i = 0; i < m; i++) {
         file >> e.u >> e.v;
-        countIncidence[--e.u] += 1, countIncidence[--e.v] += 1;
-        if (countIncidence[e.u] == 3) vertices.push_back[e.u];
-        if (countIncidence[e.v] == 3) vertices.push_back[e.v];
+        e.u--, e.v--;
+        incidenceMatrix[e.u].push_back(e.v),
+        incidenceMatrix[e.v].push_back(e.u);
+        if (incidenceMatrix[e.u].size() == 3) vertices.push_back(e.u);
+        if (incidenceMatrix[e.v].size() == 3) vertices.push_back(e.v);
         edges.push_back(e);
     }
     file.close();
+    cout << "Graph was loaded" << endl;
 }
 
 void Graph::print_graph() {
@@ -29,7 +33,7 @@ void Graph::set_edge_value(int u, int v, double weight){
     Edge e;
     for (int i = 0; i < m; i++){
         e = edges[i];
-        if (((e.u == u) && (e.v == v)) || ((e.u == v) && (e.v == u))) {
+        if (e.u == u && e.v == v) {
             edges[i].weight = weight;
             break;
         }

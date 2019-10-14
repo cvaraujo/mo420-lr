@@ -29,7 +29,8 @@ public:
     int n, m;
     vector<Edge> edges;
     vector<int> vertices;
-    
+    vector<vector<int>> incidenceMatrix;
+
     Graph() {
     }
 
