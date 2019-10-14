@@ -21,19 +21,23 @@ int Model::heuristic() {
         excessEdges = int(graph->incidenceMatrix[u].size())-2;
         if (excessEdges <= 0) {
             for (int v : graph->incidenceMatrix[u]) {
-                aux.u = u, aux.v = v, aux.weight = 0;
-                edges.push_back(aux);
-            }
-        } else {
-            for (int v : graph->incidenceMatrix[u]) {
-                if (excessEdges > 0) {
-                    aux.u = u, aux.v = v, aux.weight = 1;
-                    excessEdges--;
-                    edges.push_back(aux);
-                } else {
+                if (u < v){
                     aux.u = u, aux.v = v, aux.weight = 0;
                     edges.push_back(aux);
                 }
+            }
+        } else {
+            for (int v : graph->incidenceMatrix[u]) {
+                if (u < v){
+                    if (excessEdges > 0) {
+                        aux.u = u, aux.v = v, aux.weight = 1;
+                        excessEdges--;
+                        edges.push_back(aux);
+                    } else {
+                        aux.u = u, aux.v = v, aux.weight = 0;
+                        edges.push_back(aux);
+                    }
+                } else excessEdges--;
             }
         }
     }
@@ -42,18 +46,20 @@ int Model::heuristic() {
     this->mst = MST_Kruskal(*graph);
     this->solution = mst.solve();
 
-    for (auto edge : graph->edges) {
-        cout << edge.u << " - " << edge.v << " = " << edge.weight << endl;
-    }
+    // for (auto edge : graph->edges) {
+    //     cout << edge.u << " - " << edge.v << " = " << edge.weight << endl;
+    // }
 
     int u, v;
     for (auto edge : solution.edges) {
         u = edge.u, v = edge.v;
+        // cout << u << " -- " << v << endl;
         countIncidence[u]++, countIncidence[v]++;
         if (countIncidence[u] == 3) branches++;
         if (countIncidence[v] == 3) branches++;
     }
-    getchar();
+    // cout << "heuristic: " << branches << endl;
+    // getchar();
     return branches;
 }
 
@@ -67,6 +73,10 @@ bool Model::solve() {
     this->mst = MST_Kruskal(*graph);
     this->solution = mst.solve();
     
+    for(Edge e: graph->edges) {
+        cout << e.u << " - " << e.v << " = " << e.weight << endl;
+    }
+
     int u, v;
     for (auto edge: solution.edges){
         u = edge.u, v = edge.v;
@@ -76,18 +86,27 @@ bool Model::solve() {
         if(int(A[v].size()) == 3) originalObjectiveValue++;
     }
     objectiveValue = solution.value;
-    // cout << "MST: " << objectiveValue << endl;
+    cout << "MST: " << solution.value << endl;
 
     // Inspection problem
     double coeficient = 0;
     for (int i : graph->vertices) {
-        objectiveValue -= 2 * multipliers[i]; 
         coeficient = 1 - (multipliers[i] * double(graph->incidenceMatrix[i].size()));
         if (coeficient <= 0) {
             this->Y[i] = true;
             objectiveValue += coeficient;
         } else this->Y[i] = false;   
     }
+
+    cout << "Inspection: " << objectiveValue << endl;
+    
+    for (int i = 0; i < graph->n; i++){
+        cout << multipliers[i] << ", ";
+        objectiveValue -= (2 * multipliers[i]); 
+    }
+    cout << endl;
+    cout << "Final: " << objectiveValue << endl;
+    // getchar();
     return true;
 }
 
@@ -139,7 +158,7 @@ double Model::lagrangean() {
     double norm;
     max_iter = 1000;
     UB = heuristic(); // Create a constructive heuristic
-    LB = -1;
+    LB = 0;
 
     double min_neigh = graph->n;
     for (int i : graph->vertices) {
@@ -150,17 +169,28 @@ double Model::lagrangean() {
 
     for (int i = 0; i < graph->m; i++){
         Edge e = graph->edges[i];
-        multipliers[e.u] = multipliers[e.v] = 1/min_neigh;
-        graph->edges[i].weight = multipliers[e.u];
+        if (double(graph->incidenceMatrix[e.u].size()) > 2 && double(graph->incidenceMatrix[e.v].size()) > 2) {
+            multipliers[e.u] = multipliers[e.v] = 1/min_neigh;
+        } else if (double(graph->incidenceMatrix[e.u].size()) > 2) {
+            multipliers[e.u] = 1/min_neigh, multipliers[e.v] = 0;
+        } else {
+            multipliers[e.v] = 1/min_neigh, multipliers[e.u] = 0;
+        }
+        graph->edges[i].weight = multipliers[e.u] + multipliers[e.v];
     }
 
+    // for (auto edge : graph->edges) {
+    //     cout << edge.u << " -- " << edge.v << " = " << edge.weight << endl;
+    // }
+    // getchar();
     while (iter < max_iter) {
         if (solve()){
             // Compute the Upper Bound
             originalObjectiveFunction = getOriginalObjectiveValue();
+            cout << "Original Obj.: " << originalObjectiveFunction << endl;
+            if (UB == 0) return UB;
             if (isFeasible() && originalObjectiveFunction < UB) {
                 UB = originalObjectiveFunction;
-                cout << "Feasible" << endl;
                 cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
                 if (UB == 0) return UB;
                 if ((UB - LB) / UB <= 0.001) return UB;
@@ -168,29 +198,29 @@ double Model::lagrangean() {
 
             // and Lower Bound
             objectiveFunctionPPL = getObjValue();
-            // cout << "PPL: " << objectiveFunctionPPL << endl;
+            cout << "PPL: " << objectiveFunctionPPL << endl;
             if (objectiveFunctionPPL > LB) LB = objectiveFunctionPPL;
 
             // Get the subgradient
             getGradient(gradient);
             norm = getNorm(gradient);
             
-            lambda = 0.01;
+            lambda = 0.1;
 
             if (norm == 0) theta = norm;
             else theta = lambda * ((UB - objectiveFunctionPPL) / pow(norm, 2));
             
-            for (int i : graph->vertices)
+            for (int i : graph->vertices){
                 multipliers[i] = max(0.0, multipliers[i] + gradient[i] * theta);
+                if (multipliers[i] > 1/double(graph->incidenceMatrix[i].size()))
+                    multipliers[i] = 1/double(graph->incidenceMatrix[i].size());
+            }
 
             updateEdges();
-            // for(Edge e: graph->edges) {
-            //     cout << e.u << " - " << e.v << " = " << e.weight << endl;
-            // }
 
             cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
             iter++;
-            // getchar();
+            getchar();
         }
     }
     return LB;
