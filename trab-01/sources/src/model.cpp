@@ -11,6 +11,51 @@ Model::Model(Graph *graph) {
     } else exit(0);
     cout << "Initialized the Model" << endl;
 }
+// TODO: Cutt the edges in half
+int Model::heuristic() {
+    vector<Edge> edges = vector<Edge>();
+    vector<int> countIncidence = vector<int>(graph->n);
+    Edge aux;
+    int excessEdges, branches = 0;
+    for (int u = 0; u < graph->n; u++){
+        excessEdges = int(graph->incidenceMatrix[u].size())-2;
+        if (excessEdges <= 0) {
+            for (int v : graph->incidenceMatrix[u]) {
+                aux.u = u, aux.v = v, aux.weight = 0;
+                edges.push_back(aux);
+            }
+        } else {
+            for (int v : graph->incidenceMatrix[u]) {
+                if (excessEdges > 0) {
+                    aux.u = u, aux.v = v, aux.weight = 1;
+                    excessEdges--;
+                    edges.push_back(aux);
+                } else {
+                    aux.u = u, aux.v = v, aux.weight = 0;
+                    edges.push_back(aux);
+                }
+            }
+        }
+    }
+
+    this->graph->edges = edges;
+    this->mst = MST_Kruskal(*graph);
+    this->solution = mst.solve();
+
+    for (auto edge : graph->edges) {
+        cout << edge.u << " - " << edge.v << " = " << edge.weight << endl;
+    }
+
+    int u, v;
+    for (auto edge : solution.edges) {
+        u = edge.u, v = edge.v;
+        countIncidence[u]++, countIncidence[v]++;
+        if (countIncidence[u] == 3) branches++;
+        if (countIncidence[v] == 3) branches++;
+    }
+    getchar();
+    return branches;
+}
 
 bool Model::solve() {
     cout << "Solve" << endl;
@@ -93,7 +138,7 @@ double Model::lagrangean() {
     vector<double> gradient = vector<double>(graph->n);
     double norm;
     max_iter = 1000;
-    UB = int(graph->vertices.size()); // Create a constructive heuristic
+    UB = heuristic(); // Create a constructive heuristic
     LB = -1;
 
     double min_neigh = graph->n;

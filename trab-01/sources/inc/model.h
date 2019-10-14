@@ -41,6 +41,8 @@ public:
 
     double lagrangean();
 
+    int heuristic();
+
 };
 
 
