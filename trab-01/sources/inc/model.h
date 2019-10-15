@@ -16,10 +16,10 @@ class Model {
     vector<bool> Y;
     vector<double> multipliers;
     vector<vector<int>> A;
+    vector<Edge> bestSolution;
     double objectiveValue;
-    int originalObjectiveValue;
+    int originalObjectiveValue, bestIterationDual, bestIterationPrimal, iter = 0;
     double UB, LB, lambda;
-    int max_iter;
     bool feasible;
 
 public:
@@ -39,9 +39,11 @@ public:
 
     void updateEdges();
 
-    double lagrangean();
+    double lagrangean(int time);
 
     int heuristic();
+
+    void showSolution(const char *output);
 
 };
 

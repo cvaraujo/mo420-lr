@@ -4,7 +4,7 @@ ODIR=./sources/obj
 VPATH=./sources/src
 
 # nome do executavel
-TARGET=main
+TARGET=relaxlag
 
 #adicionar os .h's
 _DEPS = graph.h kruskal.h union_find.h solution.h include.h model.h

@@ -8,10 +8,11 @@ Model::Model(Graph *graph) {
         this->Y = vector<bool>(graph->n);
         this->A = vector<vector<int>>(graph->n, vector<int>());
         this->multipliers = vector<double>(graph->n);
+        this->bestSolution = vector<Edge>();
     } else exit(0);
     cout << "Initialized the Model" << endl;
 }
-// TODO: Cutt the edges in half
+
 int Model::heuristic() {
     vector<Edge> edges = vector<Edge>();
     vector<int> countIncidence = vector<int>(graph->n);
@@ -46,25 +47,19 @@ int Model::heuristic() {
     this->mst = MST_Kruskal(*graph);
     this->solution = mst.solve();
 
-    // for (auto edge : graph->edges) {
-    //     cout << edge.u << " - " << edge.v << " = " << edge.weight << endl;
-    // }
-
     int u, v;
     for (auto edge : solution.edges) {
         u = edge.u, v = edge.v;
-        // cout << u << " -- " << v << endl;
         countIncidence[u]++, countIncidence[v]++;
         if (countIncidence[u] == 3) branches++;
         if (countIncidence[v] == 3) branches++;
     }
-    // cout << "heuristic: " << branches << endl;
-    // getchar();
+    this->bestSolution = solution.edges;
+    this->bestIterationPrimal = -1;
     return branches;
 }
 
 bool Model::solve() {
-    cout << "Solve" << endl;
     this->Y = vector<bool>(graph->n);
     this->A = vector<vector<int>>(graph->n, vector<int>());
     this->originalObjectiveValue = 0.0;
@@ -73,9 +68,9 @@ bool Model::solve() {
     this->mst = MST_Kruskal(*graph);
     this->solution = mst.solve();
     
-    for(Edge e: graph->edges) {
-        cout << e.u << " - " << e.v << " = " << e.weight << endl;
-    }
+    // for(Edge e: graph->edges) {
+    //     cout << e.u << " - " << e.v << " = " << e.weight << endl;
+    // }
 
     int u, v;
     for (auto edge: solution.edges){
@@ -86,7 +81,7 @@ bool Model::solve() {
         if(int(A[v].size()) == 3) originalObjectiveValue++;
     }
     objectiveValue = solution.value;
-    cout << "MST: " << solution.value << endl;
+    // cout << "MST: " << solution.value << endl;
 
     // Inspection problem
     double coeficient = 0;
@@ -98,15 +93,11 @@ bool Model::solve() {
         } else this->Y[i] = false;   
     }
 
-    cout << "Inspection: " << objectiveValue << endl;
+    // cout << "Inspection: " << objectiveValue << endl;
     
     for (int i = 0; i < graph->n; i++){
-        cout << multipliers[i] << ", ";
         objectiveValue -= (2 * multipliers[i]); 
     }
-    cout << endl;
-    cout << "Final: " << objectiveValue << endl;
-    // getchar();
     return true;
 }
 
@@ -151,12 +142,12 @@ void Model::updateEdges(){
     // }
 }
 
-double Model::lagrangean() {
-    int iter = 0;
+double Model::lagrangean(int time) {
+    auto start = chrono::steady_clock::now();
+    auto end = chrono::steady_clock::now();
     double theta, originalObjectiveFunction, objectiveFunctionPPL;
     vector<double> gradient = vector<double>(graph->n);
     double norm;
-    max_iter = 1000;
     UB = heuristic(); // Create a constructive heuristic
     LB = 0;
 
@@ -167,40 +158,41 @@ double Model::lagrangean() {
         }
     }
 
+    for (int i : graph->vertices) {
+        multipliers[i] = 1.0 / min_neigh;
+    }
+
     for (int i = 0; i < graph->m; i++){
         Edge e = graph->edges[i];
-        if (double(graph->incidenceMatrix[e.u].size()) > 2 && double(graph->incidenceMatrix[e.v].size()) > 2) {
-            multipliers[e.u] = multipliers[e.v] = 1/min_neigh;
-        } else if (double(graph->incidenceMatrix[e.u].size()) > 2) {
-            multipliers[e.u] = 1/min_neigh, multipliers[e.v] = 0;
-        } else {
-            multipliers[e.v] = 1/min_neigh, multipliers[e.u] = 0;
-        }
         graph->edges[i].weight = multipliers[e.u] + multipliers[e.v];
     }
 
-    // for (auto edge : graph->edges) {
-    //     cout << edge.u << " -- " << edge.v << " = " << edge.weight << endl;
+    // for (int i = 0; i < graph->n; i++) {
+    //     cout << multipliers[i] << ", ";
     // }
-    // getchar();
-    while (iter < max_iter) {
+    // cout << endl;
+    while (chrono::duration_cast<chrono::seconds>(end - start).count() < time) {
+        // cout << "Elapsed time: " << chrono::duration_cast<chrono::seconds>(end - start).count() << endl;
         if (solve()){
             // Compute the Upper Bound
             originalObjectiveFunction = getOriginalObjectiveValue();
-            cout << "Original Obj.: " << originalObjectiveFunction << endl;
+            // cout << "Original Obj.: " << originalObjectiveFunction << endl;
             if (UB == 0) return UB;
             if (isFeasible() && originalObjectiveFunction < UB) {
                 UB = originalObjectiveFunction;
-                cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
+                this->bestSolution = this->solution.edges;
+                this->bestIterationPrimal = iter;
                 if (UB == 0) return UB;
                 if ((UB - LB) / UB <= 0.001) return UB;
             }
 
             // and Lower Bound
             objectiveFunctionPPL = getObjValue();
-            cout << "PPL: " << objectiveFunctionPPL << endl;
-            if (objectiveFunctionPPL > LB) LB = objectiveFunctionPPL;
-
+            // cout << "PPL: " << objectiveFunctionPPL << endl;
+            if (objectiveFunctionPPL > LB) {
+                LB = objectiveFunctionPPL;
+                bestIterationDual = iter;
+            }   
             // Get the subgradient
             getGradient(gradient);
             norm = getNorm(gradient);
@@ -214,51 +206,37 @@ double Model::lagrangean() {
                 multipliers[i] = max(0.0, multipliers[i] + gradient[i] * theta);
                 if (multipliers[i] > 1/double(graph->incidenceMatrix[i].size()))
                     multipliers[i] = 1/double(graph->incidenceMatrix[i].size());
+                // cout << multipliers[i] << ", ";
             }
+            // cout << endl;
 
             updateEdges();
 
             cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
             iter++;
-            getchar();
+            end = chrono::steady_clock::now();
+            // getchar();
         }
     }
     return LB;
 }
 
-//
-//void Model::showSolution(const char *input, const char *outputFile, double thetaC, double thetaP, double thetaD,
-//                         double endTime) {
-//    try {
-//
-//        double fo = 0;
-//        int i, j;
-//        for (auto *arc : data->nonDirectedArcs) {
-//            i = arc->getO(), j = arc->getD();
-//            if (cplex.getValue(this->x[i][j]) >= 0.5) {
-//                //printf("[%d, %d], ", i, j);
-//                fo += (10e5 * thetaC) + (arc->getDelay() * (10e5 * thetaP)) -
-//                      arc->getEstimateLinkDuration() * thetaD;
-//            }
-//        }
-//
-//        FILE *output;
-//        output = fopen(outputFile, "a");
-//        fprintf(output, "%s: ", input);
-//
-//        fprintf(output,
-//                " ---- CPLEX_FO = %g ---- FO = %lf ---- Time = %g ---- GAP = %g ---- LB = %g\n",
-//                UB, fo, endTime, (UB - LB) / UB, LB);
-//        fclose(output);
-//    } catch (IloException &exception) {
-//        FILE *output;
-//        output = fopen(outputFile, "a");
-//        fprintf(output, "%s: ", input);
-//
-//        fprintf(output,
-//                " ---- FO = %lf ---- GAP = %g ---- LB = %g\n",
-//                UB, (UB - LB) / UB, LB);
-//        fclose(output);
-//        cout << "Write: " << exception.getMessage() << endl;
-//    }
-//}
+void Model::showSolution(const char *output) {
+    FILE *outputFile;
+    outputFile = fopen(output, "w");
+    // Best Dual solution
+    fprintf(outputFile, "%.6lf\n", this->LB);
+    // Iteration of best dual
+    fprintf(outputFile, "%d\n", this->bestIterationDual);
+    // Best primal solution
+    fprintf(outputFile, "%.0lf\n", this->UB);
+    // Iteration of best Primal
+    fprintf(outputFile, "%d\n", this->bestIterationPrimal);
+    // Number of iterations
+    fprintf(outputFile, "%d\n", this->iter);
+    // Edges of the best solution
+    for (auto edge : bestSolution)
+        fprintf(outputFile, "%d %d\n", edge.u+1, edge.v+1);
+    
+    fclose(outputFile);
+}
