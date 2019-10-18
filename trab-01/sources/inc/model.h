@@ -41,7 +41,9 @@ public:
 
     double lagrangean(int time);
 
-    int heuristic();
+    int initialHeuristic();
+
+    void swapEdgesHeuristic();
 
     void showSolution(const char *output);
 

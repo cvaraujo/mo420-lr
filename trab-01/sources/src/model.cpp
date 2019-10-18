@@ -13,7 +13,7 @@ Model::Model(Graph *graph) {
     cout << "Initialized the Model" << endl;
 }
 
-int Model::heuristic() {
+int Model::initialHeuristic() {
     vector<Edge> edges = vector<Edge>();
     vector<int> countIncidence = vector<int>(graph->n);
     Edge aux;
@@ -57,6 +57,34 @@ int Model::heuristic() {
     this->bestSolution = solution.edges;
     this->bestIterationPrimal = -1;
     return branches;
+}
+
+// Wrong, verify the solution MST, not the original graph
+void Model::swapEdgesHeuristic(){
+    int u, minimumBranch = graph->n, adjSize;
+    for (auto v : graph->vertices) {
+        adjSize = int(graph->incidenceMatrix[u].size());
+        if (adjSize == 3) {
+            minimumBranch = 3;
+            u = v;
+            break;
+        } else {
+            if (adjSize < minimumBranch){
+                minimumBranch = adjSize;
+                u = v; 
+            }
+        }
+    }
+
+    for (auto v : graph->incidenceMatrix[u]) {
+        adjSize = int(graph->incidenceMatrix[v].size());
+        if (adjSize >= 3 || adjSize == 1) {
+            // Change
+        } else {
+            // Choose another vertex
+            // 
+        }
+    }
 }
 
 bool Model::solve() {
@@ -178,7 +206,7 @@ double Model::lagrangean(int time) {
             originalObjectiveFunction = getOriginalObjectiveValue();
             // cout << "Original Obj.: " << originalObjectiveFunction << endl;
             if (UB == 0) return UB;
-            if (isFeasible() && originalObjectiveFunction < UB) {
+            if (isFeasible() || originalObjectiveFunction < UB) {
                 UB = originalObjectiveFunction;
                 this->bestSolution = this->solution.edges;
                 this->bestIterationPrimal = iter;
