@@ -59,11 +59,12 @@ int Model::initialHeuristic() {
     return branches;
 }
 
-// Wrong, verify the solution MST, not the original graph
+// TODO: Check this function
 void Model::swapEdgesHeuristic(){
-    int u, minimumBranch = graph->n, adjSize;
+    int u, minimumBranch = graph->n, adjSize, changedVertex;
+    Edge edge;
     for (auto v : graph->vertices) {
-        adjSize = int(graph->incidenceMatrix[u].size());
+        adjSize = int(graph->A[u].size());
         if (adjSize == 3) {
             minimumBranch = 3;
             u = v;
@@ -76,13 +77,28 @@ void Model::swapEdgesHeuristic(){
         }
     }
 
-    for (auto v : graph->incidenceMatrix[u]) {
-        adjSize = int(graph->incidenceMatrix[v].size());
-        if (adjSize >= 3 || adjSize == 1) {
-            // Change
-        } else {
-            // Choose another vertex
-            // 
+    int v;
+    for (int vIndex = 0; vIndex < int(graph->A[u].size()); vIndex++) {
+    	v = graph->A[u][vIndex];
+	    adjSize = int(graph->incidenceMatrix[v].size());
+        if (adjSize >= 2) {
+        	for (int kIndex = 0; kIndex < int(graph->incidenceMatrix[v].size()); kIndex++){
+        		k = graph->graph->incidenceMatrix[v][kIndex];
+        		if (u != k) {
+        			if (int(A[k].size()) >= 3) {
+        				// Aresta v - k entra e a aresta u - v sai
+        				// Replace the vertex u, in adjacence list of v, by k
+        				for (int uIndex = 0; uIndex < A[v]; uIndex++)
+        					if (A[v][uIndex] == u) A[v][uIndex] = k;
+
+        				// Remove the vertex v in adjacence list of u
+        				A[u].erase(A[u].begin() + vIndex);
+
+        				// Insert in adjacence list of k, the vertex v
+        				A[k].push_back(v);
+        			}
+        		}
+        	}
         }
     }
 }
