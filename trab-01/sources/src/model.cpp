@@ -56,51 +56,104 @@ int Model::initialHeuristic() {
     }
     this->bestSolution = solution.edges;
     this->bestIterationPrimal = -1;
+    // cout << "Initial heuristic: " << branches << endl;
     return branches;
 }
 
 // TODO: Check this function
 void Model::swapEdgesHeuristic(){
-    int u, minimumBranch = graph->n, adjSize, changedVertex;
+    // cout << "Swap edges heuristic" << endl;
+
+    // cout << "Solution edges: " << originalObjectiveValue << endl;
+
+    // for (auto edge : solution.edges)
+    //     cout << edge.u << " - " << edge.v << endl;
+
+    int u = -1, v, k, minimumBranch = graph->n, adjSize, i, j;
+    bool changed = false, alreadyInSolution = false;
     Edge edge;
     for (auto v : graph->vertices) {
-        adjSize = int(graph->A[u].size());
+        adjSize = int(A[v].size());
         if (adjSize == 3) {
             minimumBranch = 3;
             u = v;
             break;
         } else {
-            if (adjSize < minimumBranch){
+            if (adjSize > 3 && adjSize < minimumBranch){
                 minimumBranch = adjSize;
                 u = v; 
             }
-        }
+        }   
     }
 
-    int v;
-    for (int vIndex = 0; vIndex < int(graph->A[u].size()); vIndex++) {
-    	v = graph->A[u][vIndex];
-	    adjSize = int(graph->incidenceMatrix[v].size());
-        if (adjSize >= 2) {
-        	for (int kIndex = 0; kIndex < int(graph->incidenceMatrix[v].size()); kIndex++){
-        		k = graph->graph->incidenceMatrix[v][kIndex];
-        		if (u != k) {
-        			if (int(A[k].size()) >= 3) {
-        				// Aresta v - k entra e a aresta u - v sai
-        				// Replace the vertex u, in adjacence list of v, by k
-        				for (int uIndex = 0; uIndex < A[v]; uIndex++)
-        					if (A[v][uIndex] == u) A[v][uIndex] = k;
+    // cout << "Selected " << u << ", Degree " << minimumBranch << endl; 
+    if (u != -1){
+        for (int vIndex = 0; vIndex < int(A[u].size()); vIndex++) {
+            if (changed) break;
+        	v = A[u][vIndex];
+    	    adjSize = int(graph->incidenceMatrix[v].size());
+            if (adjSize >= 2) {
+                // cout << "Adj of u selected (v): " << v << endl;
+            	for (int kIndex = 0; kIndex < int(graph->incidenceMatrix[v].size()); kIndex++){
+            		if (changed) break;
+                    k = graph->incidenceMatrix[v][kIndex];
+            		if (u != k) {
+                        // Checking if edge is already in the solution 
+                        for (int e = 0; e < int(solution.edges.size()); e++) {
+                            edge = solution.edges[e]; i = edge.u, j = edge.v;
+                            if ((i == v || i == k) && (j == v || j == k)) alreadyInSolution = true;
+                        }
 
-        				// Remove the vertex v in adjacence list of u
-        				A[u].erase(A[u].begin() + vIndex);
+                        if (!alreadyInSolution){
+                			if (int(A[k].size()) >= 3 || int(A[k].size()) == 1) {
+                                // cout << "Selected k to change: " << k << endl;
+                				// Aresta v - k entra e a aresta u - v sai
+                				// Replace the vertex u, in adjacence list of v, by k
+                				for (int uIndex = 0; uIndex < int(A[v].size()); uIndex++)
+                					if (A[v][uIndex] == u) A[v][uIndex] = k;
 
-        				// Insert in adjacence list of k, the vertex v
-        				A[k].push_back(v);
-        			}
-        		}
-        	}
+                				// Remove the vertex v in adjacence list of u
+                				A[u].erase(A[u].begin() + vIndex);
+
+                				// Insert in adjacence list of k, the vertex v
+                				A[k].push_back(v);
+
+                                // Change the edge on the solution
+                                Edge edge;
+                                for (int e = 0; e < int(solution.edges.size()); e++) {
+                                    edge = solution.edges[e];
+                                    i = edge.u, j = edge.v;
+                                    if ((i == u || i == v) && (j == u || j == v)) {
+                                        solution.edges[e].u = v, solution.edges[e].v = k;
+                                        break;
+                                    }
+                                }
+                                changed = true;
+                                break;
+                            }
+                        }
+            		}
+            	}
+            }
         }
     }
+    if (changed) {
+        // cout << "Heuristic change the solution -> " << originalObjectiveValue << endl;
+        originalObjectiveValue--;
+            // cout << "Solution edges: " << originalObjectiveValue << endl;
+
+        // for (auto edge : solution.edges)
+            // cout << edge.u << " - " << edge.v << endl;
+        // for (i = 0; i < graph->n; i++) {
+        //     cout << i << " = [";
+        //     for (auto v : A[i]){
+        //         cout << v << ", ";
+        //     }
+        //     cout << "]" << endl;
+        // }
+        // getchar();
+    }
+
 }
 
 bool Model::solve() {
@@ -142,6 +195,8 @@ bool Model::solve() {
     for (int i = 0; i < graph->n; i++){
         objectiveValue -= (2 * multipliers[i]); 
     }
+    swapEdgesHeuristic();
+
     return true;
 }
 
@@ -192,7 +247,7 @@ double Model::lagrangean(int time) {
     double theta, originalObjectiveFunction, objectiveFunctionPPL;
     vector<double> gradient = vector<double>(graph->n);
     double norm;
-    UB = heuristic(); // Create a constructive heuristic
+    UB = initialHeuristic(); // Create a constructive heuristic
     LB = 0;
 
     double min_neigh = graph->n;
@@ -221,11 +276,11 @@ double Model::lagrangean(int time) {
             // Compute the Upper Bound
             originalObjectiveFunction = getOriginalObjectiveValue();
             // cout << "Original Obj.: " << originalObjectiveFunction << endl;
-            if (UB == 0) return UB;
             if (isFeasible() || originalObjectiveFunction < UB) {
                 UB = originalObjectiveFunction;
                 this->bestSolution = this->solution.edges;
                 this->bestIterationPrimal = iter;
+                // cout << UB << endl;
                 if (UB == 0) return UB;
                 if ((UB - LB) / UB <= 0.001) return UB;
             }
@@ -266,6 +321,20 @@ double Model::lagrangean(int time) {
 }
 
 void Model::showSolution(const char *output) {
+    vector<int> branches = vector<int>(graph->n);
+    int numberofBranches = 0;
+    for (auto edge : bestSolution) {
+        branches[edge.u]++, branches[edge.v]++;
+        if (branches[edge.u] == 3) numberofBranches++;
+        if (branches[edge.v] == 3) numberofBranches++;    
+    }
+
+    if (numberofBranches != UB) {
+        FILE *outputFile;
+        outputFile = fopen(output, "w");
+        fprintf(outputFile, "Something is wrong!\n");
+    }
+
     FILE *outputFile;
     outputFile = fopen(output, "w");
     // Best Dual solution
