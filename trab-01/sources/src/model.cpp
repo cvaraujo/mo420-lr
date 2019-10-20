@@ -311,12 +311,14 @@ double Model::lagrangean(int time) {
 
             updateEdges();
 
-            cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
+            // cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
             iter++;
             end = chrono::steady_clock::now();
+            // cout << iter << endl;
             // getchar();
         }
     }
+    // getchar();
     return LB;
 }
 
