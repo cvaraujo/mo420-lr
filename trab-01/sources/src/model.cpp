@@ -183,11 +183,16 @@ bool Model::solve() {
     // Inspection problem
     double coeficient = 0;
     for (int i : graph->vertices) {
-        coeficient = 1 - (multipliers[i] * double(graph->incidenceMatrix[i].size()));
-        if (coeficient <= 0) {
-            this->Y[i] = true;
-            objectiveValue += coeficient;
-        } else this->Y[i] = false;   
+    	coeficient = 1 - (multipliers[i] * double(graph->incidenceMatrix[i].size()));
+        if (graph->fixed[i]) {
+        	objectiveValue += coeficient;
+        	Y[i] = true;
+        } else {
+	        if (coeficient <= 0) {
+	            Y[i] = true;
+	            objectiveValue += coeficient;
+	        } else Y[i] = false;   
+    	}
     }
 
     // cout << "Inspection: " << objectiveValue << endl;
@@ -195,7 +200,7 @@ bool Model::solve() {
     for (int i = 0; i < graph->n; i++){
         objectiveValue -= (2 * multipliers[i]); 
     }
-    swapEdgesHeuristic();
+    //swapEdgesHeuristic();
 
     return true;
 }
@@ -248,7 +253,10 @@ double Model::lagrangean(int time) {
     vector<double> gradient = vector<double>(graph->n);
     double norm;
     UB = initialHeuristic(); // Create a constructive heuristic
-    LB = 0;
+    LB = graph->numFixed;
+    
+    bestIterationPrimal = -1;
+    cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
 
     double min_neigh = graph->n;
     for (int i : graph->vertices) {
@@ -311,11 +319,11 @@ double Model::lagrangean(int time) {
 
             updateEdges();
 
-            // cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
+            cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
             iter++;
             end = chrono::steady_clock::now();
             // cout << iter << endl;
-            // getchar();
+            getchar();
         }
     }
     // getchar();

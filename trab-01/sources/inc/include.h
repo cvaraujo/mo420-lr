@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <chrono>
+#include <list> 
+
+#define NIL -1 
 
 using namespace std;
 

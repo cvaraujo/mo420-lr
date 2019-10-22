@@ -26,10 +26,13 @@ public:
 
 class Graph {
 public:
-    int n, m;
+    int n, m, numFixed = 0;
     vector<Edge> edges;
     vector<int> vertices;
     vector<vector<int>> incidenceMatrix;
+    vector<Edge> bridges;
+    vector<vector<bool>> isBridge;
+    vector<bool> fixed;
 
     Graph() {
     }
@@ -39,6 +42,10 @@ public:
     void print_graph();
 
     void set_edge_value(int u, int v, double weight);
+
+    void bridgeUtil(int u, bool visited[], int disc[], int low[], int parent[]);
+
+    void bridge();
 };
 
 #endif

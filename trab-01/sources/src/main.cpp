@@ -6,6 +6,7 @@ int main(int argc, const char *argv[]) {
         srand(time(NULL));
         Graph *graph = new Graph();
         graph->load_graph(argv[1]);
+        graph->bridge();
         auto *model = new Model(graph);
         model->lagrangean(atoi(argv[3]));
         model->showSolution(argv[2]);
