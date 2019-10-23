@@ -14,23 +14,23 @@ Solution MST_Kruskal::solve() {
     sort(graph.edges.begin(), graph.edges.end());
 
     Solution solution;
-    for (auto e : graph.bridges){
-        if (!set.same_set_with_find_path_compression(e.u, e.v)) {
-            set.union_by_rank_with_path_compression(e.u, e.v);
-            solution.value += e.weight;
-            solution.edges.push_back(e);
-        }
-    }
+    // for (auto e : graph.bridges){
+    //     if (!set.same_set_with_find_path_compression(e.u, e.v)) {
+    //         set.union_by_rank_with_path_compression(e.u, e.v);
+    //         solution.value += e.weight;
+    //         solution.edges.push_back(e);
+    //     }
+    // }
 
     for (int i = 0; i < graph.m; i++) {
         Edge e = graph.edges[i];
-        if (!graph.isBridge[e.u][e.v]) {
+        // if (!graph.isBridge[e.u][e.v]) {
             if (!set.same_set_with_find_path_compression(e.u, e.v)) {
                 set.union_by_rank_with_path_compression(e.u, e.v);
                 solution.value += e.weight;
                 solution.edges.push_back(e);
             }
-        }
+        // }
     }
     return solution;
 }

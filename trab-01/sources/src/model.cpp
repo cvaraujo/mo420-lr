@@ -101,7 +101,7 @@ void Model::swapEdgesHeuristic(){
                         // Checking if edge is already in the solution 
                         for (int e = 0; e < int(solution.edges.size()); e++) {
                             edge = solution.edges[e]; i = edge.u, j = edge.v;
-                            if ((i == v || i == k) && (j == v || j == k)) alreadyInSolution = true;
+                            if ((i == v && j == k) || (j == v || i == k)) alreadyInSolution = true;
                         }
 
                         if (!alreadyInSolution){
@@ -123,7 +123,7 @@ void Model::swapEdgesHeuristic(){
                                 for (int e = 0; e < int(solution.edges.size()); e++) {
                                     edge = solution.edges[e];
                                     i = edge.u, j = edge.v;
-                                    if ((i == u || i == v) && (j == u || j == v)) {
+                                    if ((i == u && j == v) || (j == u && i == v)) {
                                         solution.edges[e].u = v, solution.edges[e].v = k;
                                         break;
                                     }
@@ -200,7 +200,7 @@ bool Model::solve() {
     for (int i = 0; i < graph->n; i++){
         objectiveValue -= (2 * multipliers[i]); 
     }
-    //swapEdgesHeuristic();
+    swapEdgesHeuristic();
 
     return true;
 }
@@ -253,10 +253,10 @@ double Model::lagrangean(int time) {
     vector<double> gradient = vector<double>(graph->n);
     double norm;
     UB = initialHeuristic(); // Create a constructive heuristic
-    LB = graph->numFixed;
+    LB = 0;//graph->numFixed;
     
-    bestIterationPrimal = -1;
-    cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
+    bestIterationDual = -1;
+    //cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
 
     double min_neigh = graph->n;
     for (int i : graph->vertices) {
@@ -284,7 +284,7 @@ double Model::lagrangean(int time) {
             // Compute the Upper Bound
             originalObjectiveFunction = getOriginalObjectiveValue();
             // cout << "Original Obj.: " << originalObjectiveFunction << endl;
-            if (isFeasible() || originalObjectiveFunction < UB) {
+            if (originalObjectiveFunction < UB) {
                 UB = originalObjectiveFunction;
                 this->bestSolution = this->solution.edges;
                 this->bestIterationPrimal = iter;
@@ -319,11 +319,11 @@ double Model::lagrangean(int time) {
 
             updateEdges();
 
-            cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
+//            cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
             iter++;
             end = chrono::steady_clock::now();
             // cout << iter << endl;
-            getchar();
+//            getchar();
         }
     }
     // getchar();

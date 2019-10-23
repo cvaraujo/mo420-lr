@@ -69,7 +69,7 @@ void Graph::bridgeUtil(int u, bool visited[], int disc[], int low[], int parent[
                 isBridge[u][v] = isBridge[v][u] = true;
                 e.u = u, e.v = v; 
                 bridges.push_back(e);
-                cout << u << " " << v << endl; 
+                // cout << u << " " << v << endl; 
             }
 
         } // Update low value of u for parent function calls. 
