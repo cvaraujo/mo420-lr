@@ -31,8 +31,6 @@ public:
 
     double getOriginalObjectiveValue();
 
-    bool isFeasible();
-
     bool solve();
 
     void getGradient(vector<double> &gradient);

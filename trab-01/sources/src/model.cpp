@@ -69,20 +69,14 @@ void Model::swapEdgesHeuristic(){
     // for (auto edge : solution.edges)
     //     cout << edge.u << " - " << edge.v << endl;
 
-    int u = -1, v, k, minimumBranch = graph->n, adjSize, i, j;
+    int u = -1, v, k, adjSize, i, j;
     bool changed = false, alreadyInSolution = false;
     Edge edge;
     for (auto v : graph->vertices) {
         adjSize = int(A[v].size());
         if (adjSize == 3) {
-            minimumBranch = 3;
             u = v;
             break;
-        } else {
-            if (adjSize > 3 && adjSize < minimumBranch){
-                minimumBranch = adjSize;
-                u = v; 
-            }
         }   
     }
 
@@ -95,15 +89,13 @@ void Model::swapEdgesHeuristic(){
             if (adjSize >= 2) {
                 // cout << "Adj of u selected (v): " << v << endl;
             	for (int kIndex = 0; kIndex < int(graph->incidenceMatrix[v].size()); kIndex++){
-            		if (changed) break;
                     k = graph->incidenceMatrix[v][kIndex];
             		if (u != k) {
                         // Checking if edge is already in the solution 
                         for (int e = 0; e < int(solution.edges.size()); e++) {
                             edge = solution.edges[e]; i = edge.u, j = edge.v;
-                            if ((i == v && j == k) || (j == v || i == k)) alreadyInSolution = true;
+                            if ((i == v && j == k) || (j == v && i == k)) alreadyInSolution = true;
                         }
-
                         if (!alreadyInSolution){
                 			if (int(A[k].size()) >= 3 || int(A[k].size()) == 1) {
                                 // cout << "Selected k to change: " << k << endl;
@@ -129,17 +121,19 @@ void Model::swapEdgesHeuristic(){
                                     }
                                 }
                                 changed = true;
+
+                                originalObjectiveValue--;
                                 break;
                             }
                         }
             		}
+                    if (changed) break;
             	}
             }
         }
     }
-    if (changed) {
+    // if (changed) {
         // cout << "Heuristic change the solution -> " << originalObjectiveValue << endl;
-        originalObjectiveValue--;
             // cout << "Solution edges: " << originalObjectiveValue << endl;
 
         // for (auto edge : solution.edges)
@@ -152,7 +146,7 @@ void Model::swapEdgesHeuristic(){
         //     cout << "]" << endl;
         // }
         // getchar();
-    }
+    // }
 
 }
 
@@ -184,15 +178,15 @@ bool Model::solve() {
     double coeficient = 0;
     for (int i : graph->vertices) {
     	coeficient = 1 - (multipliers[i] * double(graph->incidenceMatrix[i].size()));
-        if (graph->fixed[i]) {
-        	objectiveValue += coeficient;
-        	Y[i] = true;
-        } else {
+        // if (graph->fixed[i]) {
+        // 	objectiveValue += coeficient;
+        // 	Y[i] = true;
+        // } else {
 	        if (coeficient <= 0) {
 	            Y[i] = true;
 	            objectiveValue += coeficient;
 	        } else Y[i] = false;   
-    	}
+    	// }
     }
 
     // cout << "Inspection: " << objectiveValue << endl;
@@ -200,6 +194,7 @@ bool Model::solve() {
     for (int i = 0; i < graph->n; i++){
         objectiveValue -= (2 * multipliers[i]); 
     }
+
     swapEdgesHeuristic();
 
     return true;
@@ -227,12 +222,6 @@ double Model::getOriginalObjectiveValue() {
     return originalObjectiveValue;
 }
 
-bool Model::isFeasible() {
-    for (int i : graph->vertices)
-        if (int(A[i].size())-2 > int(graph->incidenceMatrix[i].size()) * Y[i])
-            return false;
-    return true;
-}
 // MST problem
 void Model::updateEdges(){
     for (int i = 0; i < graph->m; i++){
@@ -255,7 +244,7 @@ double Model::lagrangean(int time) {
     UB = initialHeuristic(); // Create a constructive heuristic
     LB = 0;//graph->numFixed;
     
-    bestIterationDual = -1;
+    // bestIterationDual = -1;
     //cout << "(Feasible) Upper Bound = " << UB << ", (Relaxed) Lower Bound = " << LB << endl;
 
     double min_neigh = graph->n;
@@ -343,6 +332,7 @@ void Model::showSolution(const char *output) {
         FILE *outputFile;
         outputFile = fopen(output, "w");
         fprintf(outputFile, "Something is wrong!\n");
+        fprintf(outputFile, "%d - %lf\n", numberofBranches, UB);   
     }
 
     FILE *outputFile;
