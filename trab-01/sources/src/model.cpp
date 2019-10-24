@@ -195,7 +195,7 @@ bool Model::solve() {
         objectiveValue -= (2 * multipliers[i]); 
     }
 
-    swapEdgesHeuristic();
+    // swapEdgesHeuristic();
 
     return true;
 }
@@ -241,7 +241,7 @@ double Model::lagrangean(int time) {
     double theta, originalObjectiveFunction, objectiveFunctionPPL;
     vector<double> gradient = vector<double>(graph->n);
     double norm;
-    UB = initialHeuristic(); // Create a constructive heuristic
+    UB = graph->n;//initialHeuristic(); // Create a constructive heuristic
     LB = 0;//graph->numFixed;
     
     // bestIterationDual = -1;
